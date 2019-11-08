@@ -59,10 +59,10 @@
         block:
           - copy:
               src: "{{ compiled_files }}/peervpn"
-              dest: "{{ deb_files }}/usr/local/bin/"
+              dest: "{{ deb_files }}/peervpn-{{ version }}/usr/local/bin/"
           - copy:
               src: "{{ compiled_files }}/peervpn.conf"
-              dest: "{{ deb_files }}/etc/peervpn/"
+              dest: "{{ deb_files }}/peervpn-{{ version }}/etc/peervpn/"
         tags: [deb]
 
       - name: Make deb
