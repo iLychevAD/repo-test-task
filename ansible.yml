@@ -1,0 +1,117 @@
+---
+- hosts: all
+  gather_facts: False
+  connection: local
+  vars:
+      compiled_files: "./compiled_files"
+      deb_files: "./deb_files"
+      repo_files: "./repo_files"
+      version: "0.1-1"
+      codenames: "bionic trusty"
+  tasks:
+      - name: Build builder image
+        shell: |
+          cd builder &&
+          docker build -t builder .
+        tags: [builder]
+        
+      - file:
+          path: "{{ compiled_files }}"
+          state: absent
+        tags: [compile]
+        
+      - name: Compile binary
+        shell: |
+          docker run -v "`pwd`/{{ compiled_files }}:/artefacts" builder /build.sh
+        tags: [compile]
+
+      - file:
+          path: "{{ deb_files }}"
+          state: absent
+        tags: [deb]
+
+      - name: Prepare dpkg directory structure
+        file:
+          path: "{{ deb_files }}/peervpn-{{ version }}/{{ item }}"
+          state: directory
+        loop:
+          - 'usr/local/bin'
+          - 'etc/peervpn'
+          - 'DEBIAN'
+        tags: [deb]
+    
+      - name: Create dpkg control file
+        copy:
+          dest: "{{ deb_files }}/peervpn-{{ version }}/DEBIAN/control"
+          content: |
+            Package: peervpn
+            Version: {{ version }}
+            Section: net
+            Priority: optional
+            Architecture: amd64
+            Depends:
+            Maintainer: A. N. Onym <anonym@no.mail>
+            Description: peervpn custom build
+             No detailed description at the moment
+        tags: [deb]
+        
+      - name: Copy files
+        block:
+          - copy:
+              src: "{{ compiled_files }}/peervpn"
+              dest: "{{ deb_files }}/usr/local/bin/"
+          - copy:
+              src: "{{ compiled_files }}/peervpn.conf"
+              dest: "{{ deb_files }}/etc/peervpn/"
+        tags: [deb]
+
+      - name: Make deb
+        shell: |
+          docker run -v "`pwd`/{{ deb_files }}:/deb" builder /makedeb.sh "{{ version }}"
+        tags: [deb]
+    
+      - name: Check deb file created
+        stat: 
+          path: "{{ deb_files }}/peervpn-{{ version }}.deb"
+        register: deb_file
+        tags: [deb]
+
+      - name: Fail if no deb file
+        fail:
+          msg: No deb file !
+        when: deb_file.stat.exists == False
+        tags: [deb]
+        
+      - file:
+          path: repo/files
+          state: absent
+        tags: [repo]
+
+      - name: Prepare distributions file
+        shell: | 
+          mkdir -p "`pwd`/repo/files/conf" && 
+          for d in {{ codenames }};
+          do
+            echo $d;
+            echo "
+            Origin: nowhere
+            Label: no label
+            Suite: stable
+            Codename: ${d}
+            Version: {{ version }}
+            Architectures: amd64
+            Components: contrib 
+            Description: Peervpn custom build" >> "`pwd`/repo/files/conf/distributions"
+          done
+        tags: [repo]
+
+      - name: Copy deb to the repo image
+        copy:
+          src: "{{ deb_files }}/peervpn-{{ version }}.deb"
+          dest: repo/files
+        tags: [repo]
+        
+      - name: Run repo container
+        shell: |
+          cd repo && docker-compose up -d --build
+        tags: [repo]

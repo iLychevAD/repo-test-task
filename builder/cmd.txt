@@ -1,0 +1,2 @@
+docker run -v `pwd`/../files:/artefacts build /build.sh
+
