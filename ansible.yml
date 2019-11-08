@@ -60,6 +60,9 @@
           - copy:
               src: "{{ compiled_files }}/peervpn"
               dest: "{{ deb_files }}/peervpn-{{ version }}/usr/local/bin/"
+          - file:
+              path: "{{ deb_files }}/peervpn-{{ version }}/usr/local/bin/peervpn"
+              mode: "+x"
           - copy:
               src: "{{ compiled_files }}/peervpn.conf"
               dest: "{{ deb_files }}/peervpn-{{ version }}/etc/peervpn/"
