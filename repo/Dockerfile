@@ -5,7 +5,7 @@ RUN mkdir -p /repo
 COPY files/ /repo/
 RUN apt update && apt install -y -q reprepro && \
     apt clean all && rm -rf /var/cache/apt
-ARG CODENAMES="bionic trusty"
+ARG CODENAMES="bionic xenial"
 RUN for DIST in ${CODENAMES}; \
     do \
       for DEB in `ls -1 repo/*.deb`; \

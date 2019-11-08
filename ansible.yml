@@ -7,7 +7,7 @@
       deb_files: "./deb_files"
       repo_files: "./repo_files"
       version: "0.1-1"
-      codenames: "bionic trusty"
+      codenames: "bionic xenial"
   tasks:
       - name: Build builder image
         shell: |
